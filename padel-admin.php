@@ -646,9 +646,11 @@ function get_torneo_partidos_callback() {
             $html .= '<table class="wp-list-table widefat fixed striped">';
             $html .= '<thead>';
             $html .= '<tr>';
-            $html .= '<th width="10%">Llave</th>';
+            $html .= '<th width="10%">ID</th>';
             $html .= '<th>Pareja Local</th>';
+            $html .= '<th>Ganador</th>';
             $html .= '<th>Pareja Visitante</th>';
+            $html .= '<th>Ganador</th>';
             $html .= '</tr>';
             $html .= '</thead>';
             $html .= '<tbody>';
@@ -661,14 +663,25 @@ function get_torneo_partidos_callback() {
                 $html .= '<tr>';
                 $html .= '<td>' . $partido['id'] . '</td>';
                 // Mostrar nombre de jugador1 - nombre de jugador2 (ID de la pareja)
-                $html .= '<td>' . $pareja_local['jugador1'] . ' - ' . $pareja_local['jugador2'] . ' 
-                <button class="assign-winner button" data-pareja-id="' . $partido['pareja_local_id'] . '">Asignar Ganador</button>
-                </td>';
+                $html .= '<td>' . $pareja_local['jugador1'] . ' - ' . $pareja_local['jugador2'] . '</td>';
+                // Verificar si hay un ganador para la pareja local
+                if ($partido['ganador_id'] == $partido['pareja_local_id']) {
+                    // Si la pareja local es ganadora, mostrar un icono de trofeo en lugar del botón
+                    $html .= '<td><i class="fas fa-trophy"></i></td>';
+                } else {
+                    // Si no hay ganador, mostrar el botón para asignar ganador
+                    $html .= '<td><button class="assign-winner button" data-torneo-id="' . $torneo_id . '" data-partido-id="' . $partido['id'] . '" data-pareja-id="' . $partido['pareja_local_id'] . '">Asignar Ganador</button></td>';
+                }
                 // Mostrar nombre de jugador1 - nombre de jugador2 (ID de la pareja)
-                $html .= '<td>' . $pareja_visitante['jugador1'] . ' - ' . $pareja_visitante['jugador2'] . ' 
-                <button class="assign-winner button" data-pareja-id="' . $partido['pareja_visitante_id'] . '">Asignar Ganador</button>
-                </td>';
-                
+                $html .= '<td>' . $pareja_visitante['jugador1'] . ' - ' . $pareja_visitante['jugador2'] . '</td>';
+                // Verificar si hay un ganador para la pareja visitante
+                if ($partido['ganador_id'] == $partido['pareja_visitante_id']) {
+                    // Si la pareja visitante es ganadora, mostrar un icono de trofeo en lugar del botón
+                    $html .= '<td><i class="fas fa-trophy"></i></td>';
+                } else {
+                    // Si no hay ganador, mostrar el botón para asignar ganador
+                    $html .= '<td><button class="assign-winner button" data-torneo-id="' . $torneo_id . '" data-partido-id="' . $partido['id'] . '" data-pareja-id="' . $partido['pareja_visitante_id'] . '">Asignar Ganador</button></td>';
+                }
                 $html .= '</tr>';
             }
             $html .= '</tbody>';
@@ -684,6 +697,8 @@ function get_torneo_partidos_callback() {
         wp_send_json_error('Falta el ID del torneo.');
     }
 }
+
+
 
 
 // Función para obtener los nombres y apellidos de los jugadores de una pareja
@@ -734,24 +749,26 @@ add_action('wp_ajax_nopriv_get_torneo_partidos', 'get_torneo_partidos_callback')
 
 // Función para asignar el ganador del partido
 function asignar_ganador_partido_callback() {
-    // Verificar si se recibió el ID del torneo y el ID del ganador
-    if (isset($_POST['torneo_id']) && isset($_POST['ganador_id'])) {
-        // Obtener el ID del torneo y el ID del ganador
+    // Verificar si se recibió el ID del torneo, el ID del partido y el ID del ganador
+    if (isset($_POST['torneo_id']) && isset($_POST['partido_id']) && isset($_POST['ganador_id'])) {
+        // Obtener el ID del torneo, el ID del partido y el ID del ganador
         $torneo_id = intval($_POST['torneo_id']);
+        $partido_id = intval($_POST['partido_id']);
         $ganador_id = intval($_POST['ganador_id']);
 
         // Verificar si los valores recibidos son válidos (mayores que cero)
-        if ($torneo_id > 0 && $ganador_id > 0) {
-            // Actualizar el campo de ganador_id en la tabla de partidos
+        if ($torneo_id > 0 && $partido_id > 0 && $ganador_id > 0) {
+            // Actualizar el campo de ganador_id en la tabla de partidos para un partido específico del torneo
             global $wpdb;
             $table_partidos = $wpdb->prefix . 'pa_partidos';
 
+            // Actualizar solo el partido específico del torneo con el ganador proporcionado
             $result = $wpdb->update(
                 $table_partidos,
                 array('ganador_id' => $ganador_id),
-                array('torneo_id' => $torneo_id),
+                array('id' => $partido_id, 'torneo_id' => $torneo_id),
                 array('%d'),
-                array('%d')
+                array('%d', '%d')
             );
 
             // Verificar si la actualización fue exitosa
@@ -774,6 +791,29 @@ function asignar_ganador_partido_callback() {
 
 
 
+
 // Registrar la acción para la función de asignar ganador del partido
 add_action('wp_ajax_asignar_ganador_partido', 'asignar_ganador_partido_callback');
 add_action('wp_ajax_nopriv_asignar_ganador_partido', 'asignar_ganador_partido_callback');
+
+
+function verificar_generar_segunda_ronda() {
+    if (isset($_GET['torneo_id'])) {
+        $torneo_id = intval($_GET['torneo_id']);
+        global $wpdb;
+        $table_partidos = $wpdb->prefix . 'pa_partidos';
+        $resultados = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT ganador_id FROM $table_partidos WHERE torneo_id = %d",
+                $torneo_id
+            )
+        );
+        $todosTienenGanador = !in_array(null, $resultados, true); // Verificar si todos los partidos tienen un ganador
+        wp_send_json_success($todosTienenGanador);
+    } else {
+        wp_send_json_error('Falta el ID del torneo.');
+    }
+}
+
+add_action('wp_ajax_verificar_generar_segunda_ronda', 'verificar_generar_segunda_ronda');
+add_action('wp_ajax_nopriv_verificar_generar_segunda_ronda', 'verificar_generar_segunda_ronda');
