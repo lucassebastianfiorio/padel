@@ -3,7 +3,7 @@
 /**
  * Plugin Name: Padel Admin
  * Description: Plugin para la gestión de torneos de pádel.
- * Version: 2.0
+ * Version: 2.1
  * Author: Lucas S. Fiorio
  * Author URI: https://codesign.ar
  * Text Domain: padel-admin
