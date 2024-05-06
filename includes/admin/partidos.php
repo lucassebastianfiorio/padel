@@ -44,7 +44,6 @@ if ($torneo_id !== null) {
             </option>
         <?php endforeach; ?>
     </select>
-
     <!-- Mostrar los partidos del torneo seleccionado -->
     <div id="partidos_container">
         
@@ -72,6 +71,7 @@ if ($torneo_id !== null) {
                 }
             };
             xhr.send();
+            
         } else {
             // Limpiar el contenedor de partidos si no se ha seleccionado ningún torneo
             document.getElementById('partidos_container').innerHTML = '';
@@ -81,51 +81,60 @@ if ($torneo_id !== null) {
 
 <script>
     // Delegar el evento de clic a un elemento que ya está presente en la página
-    jQuery(document).on('click', '.assign-winner', function() {
-        // Obtener el ID del partido desde el atributo de datos
-        var partidoId = jQuery(this).data('partido-id');
+       // Delegar el evento de clic a un elemento que ya está presente en la página
+       jQuery(document).on('click', '.assign-winner', function() {
+        // Obtener el ID del torneo desde el atributo de datos
+        var torneoId = jQuery('#torneo_select').val(); // Obtener el ID del torneo seleccionado
+        var parejaId = jQuery(this).data('pareja-id'); // Obtener el ID de la pareja
 
-        // Mostrar el SweetAlert2
+        // Mostrar el SweetAlert2 para confirmar la asignación del ganador
         Swal.fire({
             title: 'Asignar Ganador',
-            text: 'Selecciona el ganador para este partido:',
+            text: '¿Está seguro de asignar el ganador para este partido?',
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: 'Pareja Local',
-            cancelButtonText: 'Pareja Visitante'
+            confirmButtonText: 'Confirmar',
+            cancelButtonText: 'Cancelar'
         }).then((result) => {
             // Verificar la acción del usuario
             if (result.isConfirmed) {
-                // El usuario seleccionó "Pareja Local"
-                asignarGanador(partidoId, 'local');
-            } else if (result.dismiss === Swal.DismissReason.cancel) {
-                // El usuario seleccionó "Pareja Visitante"
-                asignarGanador(partidoId, 'visitante');
+                // El usuario confirmó la asignación, llamar a la función para asignar el ganador
+                asignarGanador(torneoId, parejaId);
             }
         });
     });
 
     // Función para asignar el ganador mediante AJAX
-    function asignarGanador(partidoId, ganador) {
-        // Realizar la solicitud AJAX para guardar el ganador
-        jQuery.ajax({
-            url: '<?php echo admin_url('admin-ajax.php'); ?>',
-            method: 'POST',
-            data: {
-                action: 'asignar_ganador_partido',
-                partido_id: partidoId,
-                ganador: ganador // Aquí se pasa el ID de la pareja como ganador
-            },
-            success: function(response) {
-                // Manejar la respuesta del servidor si es necesario
-                console.log(response);
-            },
-            error: function(xhr, status, error) {
-                // Manejar errores de la solicitud AJAX si es necesario
-                console.error(xhr.responseText);
+   // Función para asignar el ganador mediante AJAX
+function asignarGanador(torneoId, parejaId) {
+    // Realizar la solicitud AJAX para guardar el ganador
+    jQuery.ajax({
+        url: '<?php echo admin_url('admin-ajax.php'); ?>',
+        method: 'POST',
+        data: {
+            action: 'asignar_ganador_partido',
+            torneo_id: torneoId, // Pasar el ID del torneo en lugar del ID del partido
+            ganador_id: parejaId // Aquí se pasa el ID de la pareja como ganador
+        },
+        success: function(response) {
+            // Mostrar un mensaje de éxito o error según la respuesta del servidor
+            if (response.success) {
+                Swal.fire('Éxito', response.data, 'success');
+                // Cambiar el botón de la pareja ganadora por un icono adecuado
+                var ganadorButton = jQuery('.assign-winner[data-pareja-id="' + parejaId + '"]');
+                ganadorButton.html('<i class="fas fa-trophy"></i>'); // Reemplazar con el icono deseado
+                ganadorButton.removeClass('assign-winner'); // Eliminar la clase 'assign-winner' para que no se pueda hacer clic nuevamente
+            } else {
+                Swal.fire('Error', response.data, 'error');
             }
-        });
-    }
+        },
+        error: function(xhr, status, error) {
+            // Mostrar mensaje de error en la consola del navegador
+            console.error(xhr.responseText);
+        }
+    });
+}
+
 </script>
 
 

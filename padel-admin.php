@@ -580,20 +580,13 @@ function generate_matches_callback()
         // Lógica para generar los partidos
         $ronda = 1; // Inicializamos la primera ronda
 
-        // Dividir las parejas en rondas (por simplicidad, supongamos que hay un número par de parejas)
-        $total_parejas = count($parejas_inscritas);
-        $parejas_por_ronda = $total_parejas / 2; // Asumimos que habrá una cantidad igual de parejas por ronda
-
-        // Iterar sobre cada ronda
-        while ($parejas_por_ronda >= 1) {
-            // Dividir las parejas en emparejamientos para esta ronda
-            $emparejamientos = array_chunk($parejas_inscritas, 2);
-
-            // Crear los partidos para cada emparejamiento
-            foreach ($emparejamientos as $emparejamiento) {
-                // Obtener las parejas del emparejamiento
-                $pareja1 = $emparejamiento[0];
-                $pareja2 = $emparejamiento[1];
+        // Crear los partidos para la primera ronda
+        foreach ($parejas_inscritas as $index => $pareja) {
+            // Solo generar partidos para la mitad de las parejas
+            if ($index % 2 === 0) {
+                // Obtener la pareja para la cual se generará el partido
+                $pareja_local = $pareja;
+                $pareja_visitante = $parejas_inscritas[$index + 1]; // La siguiente pareja en la lista
 
                 // Guardar el partido en la base de datos
                 $result = $wpdb->insert(
@@ -601,15 +594,12 @@ function generate_matches_callback()
                     array(
                         'torneo_id' => $torneo_id,
                         'ronda' => $ronda,
-                        'pareja_local_id' => $pareja1['pareja_id'],
-                        'pareja_visitante_id' => $pareja2['pareja_id'],
+                        'pareja_local_id' => $pareja_local['pareja_id'],
+                        'pareja_visitante_id' => $pareja_visitante['pareja_id'],
                     ),
                     array('%d', '%d', '%d', '%d')
                 );
             }
-
-            $ronda++; // Pasamos a la siguiente ronda
-            $parejas_por_ronda /= 2; // Dividimos la cantidad de parejas por ronda para la siguiente iteración
         }
 
         // Redirigir a la página de generar_partidos con un parámetro de éxito en la URL
@@ -659,7 +649,6 @@ function get_torneo_partidos_callback() {
             $html .= '<th width="10%">Llave</th>';
             $html .= '<th>Pareja Local</th>';
             $html .= '<th>Pareja Visitante</th>';
-            $html .= '<th>Acciones</th>'; // Columna para el botón de asignar ganador
             $html .= '</tr>';
             $html .= '</thead>';
             $html .= '<tbody>';
@@ -672,11 +661,14 @@ function get_torneo_partidos_callback() {
                 $html .= '<tr>';
                 $html .= '<td>' . $partido['id'] . '</td>';
                 // Mostrar nombre de jugador1 - nombre de jugador2 (ID de la pareja)
-                $html .= '<td>' . $pareja_local['jugador1'] . ' - ' . $pareja_local['jugador2'] . ' (' . $partido['pareja_local_id'] . ')</td>';
+                $html .= '<td>' . $pareja_local['jugador1'] . ' - ' . $pareja_local['jugador2'] . ' 
+                <button class="assign-winner button" data-pareja-id="' . $partido['pareja_local_id'] . '">Asignar Ganador</button>
+                </td>';
                 // Mostrar nombre de jugador1 - nombre de jugador2 (ID de la pareja)
-                $html .= '<td>' . $pareja_visitante['jugador1'] . ' - ' . $pareja_visitante['jugador2'] . ' (' . $partido['pareja_visitante_id'] . ')</td>';
-                // Agregar botón para asignar ganador
-                $html .= '<td><button class="assign-winner" data-partido-id="' . $partido['id'] . '">Asignar Ganador</button></td>';
+                $html .= '<td>' . $pareja_visitante['jugador1'] . ' - ' . $pareja_visitante['jugador2'] . ' 
+                <button class="assign-winner button" data-pareja-id="' . $partido['pareja_visitante_id'] . '">Asignar Ganador</button>
+                </td>';
+                
                 $html .= '</tr>';
             }
             $html .= '</tbody>';
@@ -742,37 +734,45 @@ add_action('wp_ajax_nopriv_get_torneo_partidos', 'get_torneo_partidos_callback')
 
 // Función para asignar el ganador del partido
 function asignar_ganador_partido_callback() {
-    // Verificar si se recibió el ID del partido y el ganador
-    if (isset($_POST['partido_id']) && isset($_POST['ganador'])) {
-        // Obtener el ID del partido y el ganador
-        $partido_id = intval($_POST['partido_id']);
-        $ganador = sanitize_text_field($_POST['ganador']);
+    // Verificar si se recibió el ID del torneo y el ID del ganador
+    if (isset($_POST['torneo_id']) && isset($_POST['ganador_id'])) {
+        // Obtener el ID del torneo y el ID del ganador
+        $torneo_id = intval($_POST['torneo_id']);
+        $ganador_id = intval($_POST['ganador_id']);
 
-        // Actualizar el campo de ganador en la tabla de partidos
-        global $wpdb;
-        $table_partidos = $wpdb->prefix . 'pa_partidos';
+        // Verificar si los valores recibidos son válidos (mayores que cero)
+        if ($torneo_id > 0 && $ganador_id > 0) {
+            // Actualizar el campo de ganador_id en la tabla de partidos
+            global $wpdb;
+            $table_partidos = $wpdb->prefix . 'pa_partidos';
 
-        $result = $wpdb->update(
-            $table_partidos,
-            array('ganador_id' => $ganador),
-            array('id' => $partido_id),
-            array('%d'),
-            array('%d')
-        );
+            $result = $wpdb->update(
+                $table_partidos,
+                array('ganador_id' => $ganador_id),
+                array('torneo_id' => $torneo_id),
+                array('%d'),
+                array('%d')
+            );
 
-        // Verificar si la actualización fue exitosa
-        if ($result !== false) {
-            // Enviar una respuesta JSON de éxito
-            wp_send_json_success('Ganador asignado correctamente.');
+            // Verificar si la actualización fue exitosa
+            if ($result !== false) {
+                // Enviar una respuesta JSON de éxito
+                wp_send_json_success('Ganador asignado correctamente.');
+            } else {
+                // Enviar una respuesta JSON de error si la actualización falló
+                wp_send_json_error('Error al asignar el ganador del partido.');
+            }
         } else {
-            // Enviar una respuesta JSON de error si la actualización falló
-            wp_send_json_error('Error al asignar el ganador del partido.');
+            // Enviar una respuesta JSON de error si los datos recibidos son inválidos
+            wp_send_json_error('Los datos recibidos son inválidos.');
         }
     } else {
         // Enviar una respuesta JSON de error si faltan datos requeridos
         wp_send_json_error('Faltan datos requeridos.');
     }
 }
+
+
 
 // Registrar la acción para la función de asignar ganador del partido
 add_action('wp_ajax_asignar_ganador_partido', 'asignar_ganador_partido_callback');
