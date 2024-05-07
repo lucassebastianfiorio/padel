@@ -29,7 +29,7 @@ $torneos = $wpdb->get_results("SELECT * FROM $table_torneos", ARRAY_A);
 
 <div class="wrap">
     <h1>Torneos</h1>
-
+    <button class="button nuevo-torneo">Nuevo torneo</button>
     <!-- Tabla de torneos -->
     <table id="torneos-table" class="wp-list-table widefat fixed striped">
         <thead>
@@ -40,6 +40,7 @@ $torneos = $wpdb->get_results("SELECT * FROM $table_torneos", ARRAY_A);
                 <th>Fecha de Fin</th>
                 <th>Categoría</th>
                 <th>Mixto</th>
+                <th>Cupo</th>
                 <th>Acciones</th>
             </tr>
         </thead>
@@ -64,7 +65,9 @@ $torneos = $wpdb->get_results("SELECT * FROM $table_torneos", ARRAY_A);
                         ?>
                     </td>
                     <td><?php echo $torneo['mixto'] == 1 ? 'Sí' : 'No'; ?></td>
-                    
+                    <td>
+                        <?php echo $torneo['cupo'] . ' Parejas' ?>
+                    </td>
                     <td>
                         <a href="<?php echo admin_url('admin.php?page=ver_inscriptos&torneo_id=' . $torneo['id']); ?>">Ver Inscritos</a>
                         <a href="<?php echo admin_url('admin.php?page=generar_partidos&torneo_id=' . $torneo['id']); ?>">Generar Partidos</a>
@@ -77,15 +80,14 @@ $torneos = $wpdb->get_results("SELECT * FROM $table_torneos", ARRAY_A);
 </div>
 
 
-
-<!-- Agregar jQuery y DataTables -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.6/css/jquery.dataTables.css">
-<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.6/js/jquery.dataTables.js"></script>
-
-<!-- Configuración de DataTables -->
 <script>
-    jQuery(document).ready(function($) {
-        $('#torneos-table').DataTable();
+    // Agregar un listener al botón "Nuevo torneo"
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelector('.nuevo-torneo').addEventListener('click', function() {
+            // Redireccionar al enlace cuando se haga clic en el botón
+            window.location.href = '<?php echo admin_url('admin.php?page=nuevo_torneo'); ?>';
+        });
     });
 </script>
+
+

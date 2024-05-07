@@ -56,16 +56,18 @@ function pa_activate_plugin()
     // Tabla de torneos
     $table_torneos = $wpdb->prefix . 'pa_torneos';
     $sql_torneos = "CREATE TABLE IF NOT EXISTS $table_torneos (
-        id mediumint(9) NOT NULL AUTO_INCREMENT,
-        nombre varchar(100) NOT NULL,
-        fecha_inicio date NOT NULL,
-        fecha_fin date NOT NULL,
-        categoria_damas varchar(50),
-        categoria_caballeros varchar(50),
-        mixto tinyint(1) NOT NULL DEFAULT 0,
-        PRIMARY KEY  (id)
-    ) $charset_collate;";
+    id mediumint(9) NOT NULL AUTO_INCREMENT,
+    nombre varchar(100) NOT NULL,
+    fecha_inicio date NOT NULL,
+    fecha_fin date NOT NULL,
+    categoria_damas varchar(50),
+    categoria_caballeros varchar(50),
+    mixto tinyint(1) NOT NULL DEFAULT 0,
+    cupo int NOT NULL DEFAULT 0,  -- Agregar el campo cupo
+    PRIMARY KEY  (id)
+) $charset_collate;";
     dbDelta($sql_torneos);
+
 
     // Tabla de parejas de jugadores
     $table_parejas = $wpdb->prefix . 'pa_parejas';
@@ -94,8 +96,8 @@ function pa_activate_plugin()
     dbDelta($sql_inscritos);
 
     // Tabla de partidos
-$table_partidos = $wpdb->prefix . 'pa_partidos';
-$sql_partidos = "CREATE TABLE IF NOT EXISTS $table_partidos (
+    $table_partidos = $wpdb->prefix . 'pa_partidos';
+    $sql_partidos = "CREATE TABLE IF NOT EXISTS $table_partidos (
     id mediumint(9) NOT NULL AUTO_INCREMENT,
     torneo_id mediumint(9) NOT NULL,
     ronda int NOT NULL,
@@ -109,7 +111,7 @@ $sql_partidos = "CREATE TABLE IF NOT EXISTS $table_partidos (
     FOREIGN KEY (pareja_visitante_id) REFERENCES $table_inscritos(pareja_id),
     FOREIGN KEY (ganador_id) REFERENCES $table_inscritos(pareja_id)
 ) $charset_collate;";
-dbDelta($sql_partidos);
+    dbDelta($sql_partidos);
 
 
 
@@ -126,8 +128,8 @@ function pa_enqueue_scripts()
     wp_enqueue_script('jquery');
 
     // Agregar DataTables
-    wp_enqueue_style('datatables-css', 'https://cdn.datatables.net/1.11.6/css/jquery.dataTables.css');
-    wp_enqueue_script('datatables-js', 'https://cdn.datatables.net/1.11.6/js/jquery.dataTables.js', array('jquery'), null, true);
+    wp_enqueue_style('datatables-css', 'https://cdn.datatables.net/2.0.7/css/dataTables.dataTables.min.css');
+    wp_enqueue_script('datatables-js', 'https://cdn.datatables.net/2.0.7/js/dataTables.min.js', array('jquery'), null, true);
 
     // Agregar FontAwesome
     wp_enqueue_style('fontawesome-css', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
@@ -204,26 +206,26 @@ function pa_main_menu_callback()
 function pa_manage_players_callback()
 {
     // Cargar el archivo jugadores.php
-    require_once(PADEL_ADMIN_PLUGIN_DIR . 'includes/admin/jugadores.php');
+    require_once (PADEL_ADMIN_PLUGIN_DIR . 'includes/admin/jugadores.php');
 }
 
 // Callback para la subpágina de administrar categorias
 function pa_manage_categorias_callback()
 {
     // Cargar el archivo jugadores.php
-    require_once(PADEL_ADMIN_PLUGIN_DIR . 'includes/admin/categorias.php');
+    require_once (PADEL_ADMIN_PLUGIN_DIR . 'includes/admin/categorias.php');
 }
 
 // Callback para la subpágina de administrar torneos
 function pa_manage_torneos_callback()
 {
     // Cargar el archivo torneos.php
-    require_once(PADEL_ADMIN_PLUGIN_DIR . 'includes/admin/torneos.php');
+    require_once (PADEL_ADMIN_PLUGIN_DIR . 'includes/admin/torneos.php');
 }
 
 function mostrar_pagina_ver_partidos()
 {
-    include_once(plugin_dir_path(__FILE__) . 'includes/admin/partidos.php');
+    include_once (plugin_dir_path(__FILE__) . 'includes/admin/partidos.php');
 }
 
 add_action('admin_menu', 'ver_inscriptos');
@@ -242,7 +244,7 @@ function ver_inscriptos()
 
 function mostrar_pagina_inscriptos()
 {
-    include_once(plugin_dir_path(__FILE__) . 'includes/admin/inscriptos.php');
+    include_once (plugin_dir_path(__FILE__) . 'includes/admin/inscriptos.php');
 }
 
 
@@ -255,7 +257,7 @@ function delete_player_callback()
 {
     // Verificar la solicitud AJAX y el nonce
     check_ajax_referer('delete_player_nonce', 'nonce');
-    
+
     // Verificar si se proporciona el ID del jugador
     if (isset($_POST['jugador_id'])) {
         $jugador_id = intval($_POST['jugador_id']);
@@ -309,7 +311,7 @@ function ver_detalles()
 
 function mostrar_pagina_detalles()
 {
-    include_once(plugin_dir_path(__FILE__) . 'includes/admin/detalles_jugador.php');
+    include_once (plugin_dir_path(__FILE__) . 'includes/admin/detalles_jugador.php');
 }
 
 
@@ -386,7 +388,7 @@ function save_player_details_callback()
             if ($result !== false) {
                 // Agregar el parámetro de éxito a la URL de redirección
                 $redirect_url = add_query_arg(array('success' => 'true'), admin_url('admin.php?page=ver_detalles&jugador_id=' . $jugador_id));
-                
+
                 // Redirigir a la página original de los detalles del jugador con el parámetro de éxito en la URL
                 wp_redirect($redirect_url);
                 exit; // ¡Es importante salir del script después de la redirección!
@@ -425,7 +427,7 @@ function nuevo_jugador()
 
 function mostrar_pagina_nuevo_jugador()
 {
-    include_once(plugin_dir_path(__FILE__) . 'includes/admin/nuevo_jugador.php');
+    include_once (plugin_dir_path(__FILE__) . 'includes/admin/nuevo_jugador.php');
 }
 
 
@@ -466,7 +468,7 @@ function add_new_player_callback()
                 'id' => $existing_player->id,
             );
             // Enviar una respuesta JSON con el mensaje de error y los datos del jugador existente
-            wp_send_json_error(array('message' => 'Ya existe un jugador con el mismo número de DNI.', 'existing_player' => $existing_player_data));        
+            wp_send_json_error(array('message' => 'Ya existe un jugador con el mismo número de DNI.', 'existing_player' => $existing_player_data));
         } else {
             try {
                 // Insertar el nuevo jugador en la base de datos
@@ -543,7 +545,7 @@ function generar_partidos()
 
 function mostrar_pagina_generar_partidos()
 {
-    include_once(plugin_dir_path(__FILE__) . 'includes/admin/generar_partidos.php');
+    include_once (plugin_dir_path(__FILE__) . 'includes/admin/generar_partidos.php');
 }
 
 
@@ -562,7 +564,7 @@ function generate_matches_callback()
         $table_inscritos = $wpdb->prefix . 'pa_inscritos';
         $table_parejas = $wpdb->prefix . 'pa_parejas';
         $table_jugadores = $wpdb->prefix . 'pa_jugadores'; // Definir la tabla de jugadores
-        $table_partidos = $wpdb->prefix . 'pa_partidos'; 
+        $table_partidos = $wpdb->prefix . 'pa_partidos';
 
         $parejas_inscritas = $wpdb->get_results(
             $wpdb->prepare(
@@ -621,7 +623,8 @@ add_action('admin_post_nopriv_generate_matches', 'generate_matches_callback');
 
 
 // Función para obtener los partidos de un torneo mediante AJAX
-function get_torneo_partidos_callback() {
+function get_torneo_partidos_callback()
+{
     // Verificar si se recibió el ID del torneo
     if (isset($_GET['torneo_id'])) {
         // Obtener el ID del torneo
@@ -630,19 +633,22 @@ function get_torneo_partidos_callback() {
         // Consultar la base de datos para obtener los partidos del torneo seleccionado
         global $wpdb;
         $table_partidos = $wpdb->prefix . 'pa_partidos';
+        $table_torneos = $wpdb->prefix . 'pa_torneos';
 
-        $partidos = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT * FROM $table_partidos WHERE torneo_id = %d",
-                $torneo_id
-            ),
-            ARRAY_A
+        $consulta_partidos = $wpdb->prepare(
+            "SELECT partidos.*, torneos.nombre AS nombre_torneo FROM $table_partidos AS partidos 
+    JOIN $table_torneos AS torneos ON partidos.torneo_id = torneos.id
+    WHERE partidos.torneo_id = %d",
+            $torneo_id
         );
+
+        $partidos = $wpdb->get_results($consulta_partidos, ARRAY_A);
+
 
         // Generar el HTML para los partidos del torneo
         $html = '';
         if ($partidos) {
-            $html .= '<h2>Partidos del Torneo</h2>';
+            $html .= '<h2>Partidos del Torneo: ' . esc_html($partidos[0]['nombre_torneo']) . '</h2>';
             $html .= '<table class="wp-list-table widefat fixed striped">';
             $html .= '<thead>';
             $html .= '<tr>';
@@ -659,7 +665,7 @@ function get_torneo_partidos_callback() {
                 $pareja_local = obtener_pareja_jugadores($partido['pareja_local_id']);
                 // Obtener los nombres y apellidos de los jugadores de la pareja visitante
                 $pareja_visitante = obtener_pareja_jugadores($partido['pareja_visitante_id']);
-                
+
                 $html .= '<tr>';
                 $html .= '<td>' . $partido['id'] . '</td>';
                 // Mostrar nombre de jugador1 - nombre de jugador2 (ID de la pareja)
@@ -689,7 +695,7 @@ function get_torneo_partidos_callback() {
         } else {
             $html .= '<p>No se encontraron partidos para este torneo.</p>';
         }
-        
+
         // Devolver el HTML de los partidos del torneo
         wp_send_json_success($html);
     } else {
@@ -702,7 +708,8 @@ function get_torneo_partidos_callback() {
 
 
 // Función para obtener los nombres y apellidos de los jugadores de una pareja
-function obtener_pareja_jugadores($pareja_id) {
+function obtener_pareja_jugadores($pareja_id)
+{
     global $wpdb;
 
     // Consultar la base de datos para obtener los IDs de los jugadores de la pareja
@@ -748,7 +755,8 @@ add_action('wp_ajax_nopriv_get_torneo_partidos', 'get_torneo_partidos_callback')
 
 
 // Función para asignar el ganador del partido
-function asignar_ganador_partido_callback() {
+function asignar_ganador_partido_callback()
+{
     // Verificar si se recibió el ID del torneo, el ID del partido y el ID del ganador
     if (isset($_POST['torneo_id']) && isset($_POST['partido_id']) && isset($_POST['ganador_id'])) {
         // Obtener el ID del torneo, el ID del partido y el ID del ganador
@@ -797,7 +805,8 @@ add_action('wp_ajax_asignar_ganador_partido', 'asignar_ganador_partido_callback'
 add_action('wp_ajax_nopriv_asignar_ganador_partido', 'asignar_ganador_partido_callback');
 
 
-function verificar_generar_segunda_ronda() {
+function verificar_generar_segunda_ronda()
+{
     if (isset($_GET['torneo_id'])) {
         $torneo_id = intval($_GET['torneo_id']);
         global $wpdb;
@@ -817,3 +826,24 @@ function verificar_generar_segunda_ronda() {
 
 add_action('wp_ajax_verificar_generar_segunda_ronda', 'verificar_generar_segunda_ronda');
 add_action('wp_ajax_nopriv_verificar_generar_segunda_ronda', 'verificar_generar_segunda_ronda');
+
+
+
+add_action('admin_menu', 'nuevo_torneo');
+
+function nuevo_torneo()
+{
+    add_submenu_page(
+        'slug', // Slug del menú padre
+        'Nuevo Torneo',      // Título de la página
+        'Nuevo Torneo',      // Título en el menú
+        'manage_options',      // Capacidad requerida para ver la página
+        'nuevo_torneo',   // Slug de la página
+        'mostrar_pagina_nuevo_torneo' // Función para mostrar el contenido de la página
+    );
+}
+
+function mostrar_pagina_nuevo_torneo()
+{
+    include_once (plugin_dir_path(__FILE__) . 'includes/admin/nuevo_torneo.php');
+}
